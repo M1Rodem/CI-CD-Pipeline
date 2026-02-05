@@ -1,0 +1,6 @@
+version: '3'
+services:
+  app:
+    image: yourdockerhub/ci-cd-demo:latest
+    ports:
+      - "8080:80"
