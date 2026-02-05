@@ -165,6 +165,14 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          # Сначала получаем последние изменения
+          git fetch origin
+          git reset --hard origin/${{ github.head_ref }}
+          # Добавляем изменения
+          git add changelog.md
+          git commit -m "Update changelog for version $(cat version)"
+          # Пушим с force
+          git push origin HEAD:${{ github.head_ref }} --force
           git pull origin ${{ github.head_ref }} --rebase
           git add changelog.md
           git commit -m "Update changelog for version $(cat version)"
