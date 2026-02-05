@@ -142,43 +142,49 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+
+      - name: Get version
+        id: get-version
+        run: |
+          VERSION=$(cat version)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update changelog
         run: |
-          VERSION=$(cat version)
+          VERSION="${{ steps.get-version.outputs.VERSION }}"
           DATE=$(date +'%Y-%m-%d')
           
-          echo "# Changelog" > temp.md
-          echo "" >> temp.md
-          echo "## [$VERSION] - $DATE" >> temp.md
-          echo "**Branch:** ${{ github.head_ref }}" >> temp.md
-          echo "" >> temp.md
+          # Создаём временный файл
+          echo "# Changelog" > /tmp/CHANGELOG.md
+          echo "" >> /tmp/CHANGELOG.md
+          echo "## [$VERSION] - $DATE" >> /tmp/CHANGELOG.md
+          echo "**Branch:** ${{ github.head_ref }}" >> /tmp/CHANGELOG.md
+          echo "**PR:** #${{ github.event.pull_request.number }}" >> /tmp/CHANGELOG.md
+          echo "" >> /tmp/CHANGELOG.md
           
+          # Добавляем старый контент (если есть)
           if [ -f changelog.md ]; then
-            tail -n +2 changelog.md >> temp.md
+            tail -n +2 changelog.md >> /tmp/CHANGELOG.md
           fi
           
-          mv temp.md changelog.md
+          # Заменяем файл
+          mv /tmp/CHANGELOG.md changelog.md
+          
           echo "Changelog updated for version $VERSION"
+          head -10 changelog.md
 
-      - name: Commit changelog
+      - name: Commit and push changelog
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          # Сначала получаем последние изменения
           git fetch origin
           git reset --hard origin/${{ github.head_ref }}
-          # Добавляем изменения
           git add changelog.md
-          git commit -m "Update changelog for version $(cat version)"
-          # Пушим с force
-          git push origin HEAD:${{ github.head_ref }} --force
-          git pull origin ${{ github.head_ref }} --rebase
-          git add changelog.md
-          git commit -m "Update changelog for version $(cat version)"
+          git commit -m "Update changelog for version ${{ steps.get-version.outputs.VERSION }}"
           git push origin HEAD:${{ github.head_ref }} --force
 
-      - name: Add changelog label
+      - name: Add changelog label to PR
         uses: actions/github-script@v7
         with:
           script: |
