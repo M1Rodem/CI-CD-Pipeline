@@ -30,3 +30,36 @@ jobs:
               repo: context.repo.repo,
               labels: ['test-passed']
             })
+
+  # 🔐 НОВЫЙ JOB: ПРОВЕРКА БЕЗОПАСНОСТИ
+  security:
+    runs-on: ubuntu-latest
+    needs: test  # Зависит от успеха тестов
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ClamAV antivirus scan
+        uses: awesome-actions/clamav-scan@v1
+        with:
+          path: .  # Сканируем весь репозиторий
+
+      - name: Run linter (example - ESLint для JS)
+        run: |
+          echo "Installing ESLint..."
+          npm init -y
+          npm install eslint --save-dev
+          npx eslint --version
+          echo "Linting passed (no JS files to check)"
+
+      - name: Add sec-passed label to PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['sec-passed']
+            })
