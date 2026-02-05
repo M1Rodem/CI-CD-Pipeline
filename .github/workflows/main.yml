@@ -132,3 +132,50 @@ jobs:
               repo: context.repo.repo,
               labels: ['${{ steps.new-version.outputs.NEW_VERSION }}']
             })
+
+    changelog:
+    runs-on: ubuntu-latest
+    needs: version-update
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update changelog
+        run: |
+          VERSION=$(cat version)
+          DATE=$(date +'%Y-%m-%d')
+          
+          echo "# Changelog" > temp.md
+          echo "" >> temp.md
+          echo "## [$VERSION] - $DATE" >> temp.md
+          echo "**Branch:** ${{ github.head_ref }}" >> temp.md
+          echo "" >> temp.md
+          
+          if [ -f changelog.md ]; then
+            tail -n +2 changelog.md >> temp.md
+          fi
+          
+          mv temp.md changelog.md
+          echo "Changelog updated for version $VERSION"
+
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add changelog.md
+          git commit -m "Update changelog for version $(cat version)"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Add changelog label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['changelog']
+            })
