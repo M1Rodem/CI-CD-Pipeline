@@ -173,7 +173,11 @@ jobs:
           git commit -m "Update changelog for version $(cat version)"
           # Пушим с force
           git push origin HEAD:${{ github.head_ref }} --force
-          
+          git pull origin ${{ github.head_ref }} --rebase
+          git add changelog.md
+          git commit -m "Update changelog for version $(cat version)"
+          git push origin HEAD:${{ github.head_ref }} --force
+
       - name: Add changelog label
         uses: actions/github-script@v7
         with:
